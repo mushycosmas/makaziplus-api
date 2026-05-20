@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  fullName  String
+  email     String   @unique
+  password  String
+  role      Role     @default(USER)
+
+  properties Property[]
+  favorites  Favorite[]
+
+  createdAt DateTime @default(now())
+}
+
+model Category {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  icon      String?
+
+  properties Property[]
+
+  createdAt DateTime   @default(now())
+}
+
+
+model Amenity {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  icon      String?
+
+  properties PropertyAmenity[]
+
+  createdAt DateTime @default(now())
+}
+
+model Property {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String
+  price       Float
+  location    String
+
+  type        PropertyType
+  status      PropertyStatus @default(AVAILABLE)
+
+  userId      Int
+  user        User @relation(fields: [userId], references: [id])
+
+  categoryId  Int?
+  category    Category? @relation(fields: [categoryId], references: [id])
+
+  images      PropertyImage[]
+  favorites   Favorite[]
+  amenities   PropertyAmenity[]
+
+  createdAt   DateTime @default(now())
+}
+model PropertyImage {
+  id         Int      @id @default(autoincrement())
+  url        String
+
+  propertyId Int
+  property   Property @relation(fields: [propertyId], references: [id])
+}
+
+model Favorite {
+  id         Int @id @default(autoincrement())
+
+  userId     Int
+  propertyId Int
+
+  user       User     @relation(fields: [userId], references: [id])
+  property   Property @relation(fields: [propertyId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+enum Role {
+  USER
+  AGENT
+  ADMIN
+}
+
+enum PropertyType {
+  HOUSE
+  APARTMENT
+  LAND
+  OFFICE
+  SHOP
+}
+
+enum PropertyStatus {
+  AVAILABLE
+  SOLD
+  RENTED
+}
+
+
+model PropertyAmenity {
+  id         Int @id @default(autoincrement())
+
+  propertyId Int
+  amenityId  Int
+
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  amenity    Amenity  @relation(fields: [amenityId], references: [id], onDelete: Cascade)
+
+  @@unique([propertyId, amenityId])
+}

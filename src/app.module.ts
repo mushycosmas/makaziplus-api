@@ -9,6 +9,10 @@ import { FavoritesModule } from './favorites/favorites.module';
 import { CategoriesModule } from './categories/categories.module';
 import { PropertyImagesModule } from './property-images/property-images.module';
 import { AmenitiesModule } from './amenities/amenities.module';
+import { CountriesModule } from './countries/countries.module';
+import { RegionsModule } from './regions/regions.module';
+import { DistrictsModule } from './districts/districts.module';
+import { WardsModule } from './wards/wards.module';
 @Module({
   imports: [
          PrismaModule,
@@ -18,7 +22,11 @@ import { AmenitiesModule } from './amenities/amenities.module';
          FavoritesModule,
          CategoriesModule,
          PropertyImagesModule,
-         AmenitiesModule],
+         AmenitiesModule,
+         CountriesModule,
+         RegionsModule,
+         DistrictsModule,
+         WardsModule],
   controllers: [AppController],
   providers: [AppService],
 })

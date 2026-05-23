@@ -20,6 +20,62 @@ model User {
   createdAt DateTime @default(now())
 }
 
+model Country {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  code      String?   // TZ, KE, UG etc
+
+  regions   Region[]
+
+  createdAt DateTime  @default(now())
+}
+
+model Region {
+  id        Int       @id @default(autoincrement())
+  name      String
+  countryId Int
+
+  country   Country   @relation(fields: [countryId], references: [id])
+
+  districts District[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([name, countryId])
+}
+model District {
+  id        Int      @id @default(autoincrement())
+  name      String
+  regionId  Int
+
+  region    Region   @relation(fields: [regionId], references: [id])
+
+  wards     Ward[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([name, regionId])
+}
+model Ward {
+  id         Int      @id @default(autoincrement())
+  name       String
+
+  // 🌍 RELATION TO DISTRICT
+  districtId Int
+  district   District @relation(fields: [districtId], references: [id], onDelete: Cascade)
+
+  // 🏠 PROPERTIES IN THIS WARD
+  properties Property[]
+
+  // 🕒 TIMESTAMPS (recommended)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // 🔒 Prevent duplicate ward names in same district
+  @@unique([name, districtId])
+  @@index([districtId])
+}
+
 model Category {
   id        Int        @id @default(autoincrement())
   name      String     @unique
@@ -46,22 +102,29 @@ model Property {
   title       String
   description String
   price       Float
-  location    String
 
   type        PropertyType
   status      PropertyStatus @default(AVAILABLE)
 
+  // 👤 OWNER
   userId      Int
   user        User @relation(fields: [userId], references: [id])
 
+  // 🏷️ CATEGORY
   categoryId  Int?
   category    Category? @relation(fields: [categoryId], references: [id])
 
+  // 🌍 ONLY ONE LOCATION FIELD (CLEAN)
+  wardId      Int
+  ward        Ward @relation(fields: [wardId], references: [id])
+
+  // 🖼️ RELATIONS
   images      PropertyImage[]
   favorites   Favorite[]
   amenities   PropertyAmenity[]
 
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 model PropertyImage {
   id         Int      @id @default(autoincrement())

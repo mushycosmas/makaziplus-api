@@ -1,9 +1,9 @@
 import { Body, Controller, Delete, Get, Param, Post, Patch } from '@nestjs/common';
-import { AmenitiesService } from './amenities.service';
+import { WardsService } from './wards.service';
 
-@Controller('amenities')
-export class AmenitiesController {
-  constructor(private service: AmenitiesService) {}
+@Controller('wards')
+export class WardsController {
+  constructor(private service: WardsService) {}
 
   @Post()
   create(@Body() body: any) {

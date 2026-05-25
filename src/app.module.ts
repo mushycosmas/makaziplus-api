@@ -7,7 +7,6 @@ import { AuthModule } from './auth/auth.module';
 import { PropertiesModule } from './properties/properties.module';
 import { FavoritesModule } from './favorites/favorites.module';
 import { CategoriesModule } from './categories/categories.module';
-import { PropertyImagesModule } from './property-images/property-images.module';
 import { AmenitiesModule } from './amenities/amenities.module';
 import { CountriesModule } from './countries/countries.module';
 import { RegionsModule } from './regions/regions.module';
@@ -21,7 +20,6 @@ import { WardsModule } from './wards/wards.module';
          PropertiesModule,
          FavoritesModule,
          CategoriesModule,
-         PropertyImagesModule,
          AmenitiesModule,
          CountriesModule,
          RegionsModule,

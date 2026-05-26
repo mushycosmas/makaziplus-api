@@ -209,16 +209,25 @@ export class PropertiesService {
       throw new NotFoundException('Property not found');
     }
 
-    // =========================
-    // DELETE FILES FROM DISK
-    // =========================
+    // DELETE FILES
     for (const img of existing.images) {
       this.deleteFile(img.url);
     }
 
-    // =========================
-    // DELETE FROM DATABASE
-    // =========================
+    // DELETE DB RELATIONS FIRST (IMPORTANT FIX)
+    await this.prisma.propertyAmenity.deleteMany({
+      where: { propertyId: id },
+    });
+
+    await this.prisma.propertyImage.deleteMany({
+      where: { propertyId: id },
+    });
+
+    await this.prisma.favorite.deleteMany({
+      where: { propertyId: id },
+    });
+
+    // DELETE PROPERTY
     return this.prisma.property.delete({
       where: { id },
     });

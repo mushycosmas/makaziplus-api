@@ -1,9 +1,38 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+
 import { PrismaService } from '../prisma/prisma.service';
+import * as fs from 'fs';
+import * as path from 'path';
 
 @Injectable()
 export class PropertiesService {
   constructor(private prisma: PrismaService) {}
+
+  // =========================
+  // DELETE FILE HELPER
+  // =========================
+  private deleteFile(fileName: string) {
+    try {
+      const filePath = path.join(
+        process.cwd(),
+        'uploads',
+        fileName,
+      );
+
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    } catch (err: unknown) {
+  if (err instanceof Error) {
+    console.log(err.message);
+  } else {
+    console.log(err);
+  }
+}
+  }
 
   // =========================
   // CREATE PROPERTY
@@ -11,7 +40,6 @@ export class PropertiesService {
   async create(dto: any) {
     const { amenityIds, images, ...propertyData } = dto;
 
-    // FIX: string → array
     const parsedAmenityIds =
       typeof amenityIds === 'string'
         ? JSON.parse(amenityIds)
@@ -35,13 +63,13 @@ export class PropertiesService {
           : undefined,
 
         // =========================
-        // AMENITIES (MANY-TO-MANY)
+        // AMENITIES
         // =========================
         amenities: parsedAmenityIds?.length
           ? {
-              create: parsedAmenityIds.map((amenityId: number) => ({
+              create: parsedAmenityIds.map((id: number) => ({
                 amenity: {
-                  connect: { id: amenityId },
+                  connect: { id },
                 },
               })),
             }
@@ -53,9 +81,7 @@ export class PropertiesService {
         category: true,
         ward: true,
         images: true,
-        amenities: {
-          include: { amenity: true },
-        },
+        amenities: { include: { amenity: true } },
         favorites: true,
       },
     });
@@ -71,9 +97,7 @@ export class PropertiesService {
         category: true,
         ward: true,
         images: true,
-        amenities: {
-          include: { amenity: true },
-        },
+        amenities: { include: { amenity: true } },
         favorites: true,
       },
     });
@@ -90,19 +114,17 @@ export class PropertiesService {
         category: true,
         ward: true,
         images: true,
-        amenities: {
-          include: { amenity: true },
-        },
+        amenities: { include: { amenity: true } },
         favorites: true,
       },
     });
   }
 
   // =========================
-  // UPDATE PROPERTY (FIXED SAFE VERSION)
+  // UPDATE PROPERTY (FULL FIXED)
   // =========================
  async update(id: number, dto: any) {
-  const { amenityIds, images, ...propertyData } = dto;
+  const { amenityIds, images, ...rest } = dto;
 
   const parsedAmenityIds =
     typeof amenityIds === 'string'
@@ -111,35 +133,30 @@ export class PropertiesService {
 
   const files = images || [];
 
-  // 1. Check property exists
-  const existing = await this.prisma.property.findUnique({
-    where: { id },
-    include: { images: true },
-  });
-
-  if (!existing) {
-    throw new Error('Property not found');
-  }
+  // =========================
+  // FIX TYPES (IMPORTANT)
+  // =========================
+  const propertyData = {
+    ...rest,
+    price: rest.price ? Number(rest.price) : undefined,
+    userId: rest.userId ? Number(rest.userId) : undefined,
+    wardId: rest.wardId ? Number(rest.wardId) : undefined,
+    categoryId: rest.categoryId ? Number(rest.categoryId) : undefined,
+  };
 
   return this.prisma.$transaction(async (tx) => {
-    // =========================
-    // UPDATE PROPERTY BASIC DATA
-    // =========================
-    const updated = await tx.property.update({
+    // UPDATE PROPERTY
+    await tx.property.update({
       where: { id },
       data: propertyData,
     });
 
-    // =========================
-    // DELETE OLD IMAGES (DB)
-    // =========================
+    // DELETE OLD IMAGES
     await tx.propertyImage.deleteMany({
       where: { propertyId: id },
     });
 
-    // =========================
     // ADD NEW IMAGES
-    // =========================
     if (files.length > 0) {
       await tx.propertyImage.createMany({
         data: files.map((file: any) => ({
@@ -149,9 +166,7 @@ export class PropertiesService {
       });
     }
 
-    // =========================
     // RESET AMENITIES
-    // =========================
     await tx.propertyAmenity.deleteMany({
       where: { propertyId: id },
     });
@@ -180,18 +195,30 @@ export class PropertiesService {
     });
   });
 }
+
   // =========================
-  // DELETE PROPERTY (CLEAN)
+  // DELETE PROPERTY (FULL CLEAN)
   // =========================
   async remove(id: number) {
     const existing = await this.prisma.property.findUnique({
       where: { id },
+      include: { images: true },
     });
 
     if (!existing) {
       throw new NotFoundException('Property not found');
     }
 
+    // =========================
+    // DELETE FILES FROM DISK
+    // =========================
+    for (const img of existing.images) {
+      this.deleteFile(img.url);
+    }
+
+    // =========================
+    // DELETE FROM DATABASE
+    // =========================
     return this.prisma.property.delete({
       where: { id },
     });

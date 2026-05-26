@@ -29,7 +29,6 @@ export class PropertiesController {
     FilesInterceptor('images', 10, {
       storage: diskStorage({
         destination: './uploads',
-
         filename: (req, file, cb) => {
           const unique =
             Date.now() + '-' + Math.round(Math.random() * 1e9);
@@ -45,7 +44,7 @@ export class PropertiesController {
   ) {
     return this.service.create({
       ...dto,
-      images: files,
+      images: files || [],
     });
   }
 
@@ -66,15 +65,35 @@ export class PropertiesController {
   }
 
   // =========================
-  // UPDATE
+  // UPDATE PROPERTY (FIXED)
   // =========================
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: any) {
-    return this.service.update(Number(id), dto);
+  @UseInterceptors(
+    FilesInterceptor('images', 10, {
+      storage: diskStorage({
+        destination: './uploads',
+        filename: (req, file, cb) => {
+          const unique =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+
+          cb(null, unique + extname(file.originalname));
+        },
+      }),
+    }),
+  )
+  update(
+    @Param('id') id: string,
+    @Body() dto: any,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    return this.service.update(Number(id), {
+      ...dto,
+      images: files || [],
+    });
   }
 
   // =========================
-  // DELETE
+  // DELETE PROPERTY
   // =========================
   @Delete(':id')
   remove(@Param('id') id: string) {

@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Post,
+  Query,
   Param,
   Patch,
   Delete,
@@ -52,8 +53,11 @@ export class PropertiesController {
   // GET ALL
   // =========================
   @Get()
-  findAll() {
-    return this.service.findAll();
+  findAll(
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '10',
+  ) {
+    return this.service.findAll(Number(page), Number(limit));
   }
 
   // =========================

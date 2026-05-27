@@ -12,6 +12,7 @@ import { CountriesModule } from './countries/countries.module';
 import { RegionsModule } from './regions/regions.module';
 import { DistrictsModule } from './districts/districts.module';
 import { WardsModule } from './wards/wards.module';
+import { AgentsModule } from './agents/agents.module';
 @Module({
   imports: [
          PrismaModule,
@@ -24,7 +25,8 @@ import { WardsModule } from './wards/wards.module';
          CountriesModule,
          RegionsModule,
          DistrictsModule,
-         WardsModule],
+         WardsModule,
+         AgentsModule],
   controllers: [AppController],
   providers: [AppService],
 })

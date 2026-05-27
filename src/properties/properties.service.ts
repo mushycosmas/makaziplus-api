@@ -90,19 +90,49 @@ export class PropertiesService {
   // =========================
   // GET ALL
   // =========================
-  findAll() {
-    return this.prisma.property.findMany({
+ async findAll(page: number = 1, limit: number = 10) {
+  const skip = (page - 1) * limit;
+
+  const [data, total] = await this.prisma.$transaction([
+    this.prisma.property.findMany({
+      skip,
+      take: limit,
+      orderBy: {
+        createdAt: 'desc',
+      },
       include: {
-        user: true,
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+          },
+        },
         category: true,
         ward: true,
         images: true,
-        amenities: { include: { amenity: true } },
-        favorites: true,
+        amenities: {
+          include: {
+            amenity: true,
+          },
+        },
+        _count: {
+          select: {
+            favorites: true,
+          },
+        },
       },
-    });
-  }
+    }),
+    this.prisma.property.count(),
+  ]);
 
+  return {
+    data,
+    total,
+    page,
+    lastPage: Math.ceil(total / limit),
+  };
+}
   // =========================
   // GET ONE
   // =========================

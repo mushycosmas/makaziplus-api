@@ -1,3 +1,6 @@
+// ============================================
+// GENERATOR & DATASOURCE
+// ============================================
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,157 +10,18 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        Int      @id @default(autoincrement())
-  fullName  String
-  email     String   @unique
-  password  String
-  role      Role     @default(USER)
-
-  properties Property[]
-  favorites  Favorite[]
-
-  createdAt DateTime @default(now())
-}
-
-model Country {
-  id        Int       @id @default(autoincrement())
-  name      String    @unique
-  code      String?   // TZ, KE, UG etc
-
-  regions   Region[]
-
-  createdAt DateTime  @default(now())
-}
-
-model Region {
-  id        Int       @id @default(autoincrement())
-  name      String
-  countryId Int
-
-  country   Country   @relation(fields: [countryId], references: [id])
-
-  districts District[]
-
-  createdAt DateTime @default(now())
-
-  @@unique([name, countryId])
-}
-model District {
-  id        Int      @id @default(autoincrement())
-  name      String
-  regionId  Int
-
-  region    Region   @relation(fields: [regionId], references: [id])
-
-  wards     Ward[]
-
-  createdAt DateTime @default(now())
-
-  @@unique([name, regionId])
-}
-model Ward {
-  id         Int      @id @default(autoincrement())
-  name       String
-
-  // 🌍 RELATION TO DISTRICT
-  districtId Int
-  district   District @relation(fields: [districtId], references: [id], onDelete: Cascade)
-
-  // 🏠 PROPERTIES IN THIS WARD
-  properties Property[]
-
-  // 🕒 TIMESTAMPS (recommended)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  // 🔒 Prevent duplicate ward names in same district
-  @@unique([name, districtId])
-  @@index([districtId])
-}
-
-model Category {
-  id        Int        @id @default(autoincrement())
-  name      String     @unique
-  icon      String?
-
-  properties Property[]
-
-  createdAt DateTime   @default(now())
-}
-
-
-model Amenity {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
-  icon      String?
-
-  properties PropertyAmenity[]
-
-  createdAt DateTime @default(now())
-}
-
-model Property {
-  id          Int      @id @default(autoincrement())
-  title       String
-  description String
-  price       Float
-
-  type        PropertyType
-  status      PropertyStatus @default(AVAILABLE)
-
-  // 👤 OWNER
-  userId      Int
-  user        User @relation(fields: [userId], references: [id])
-
-  // 🏷️ CATEGORY
-  categoryId  Int?
-  category    Category? @relation(fields: [categoryId], references: [id])
-
-  // 🌍 ONLY ONE LOCATION FIELD (CLEAN)
-  wardId      Int
-  ward        Ward @relation(fields: [wardId], references: [id])
-
-  // 🖼️ RELATIONS
-  images      PropertyImage[]
-  favorites   Favorite[]
-  amenities   PropertyAmenity[]
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-model PropertyImage {
-  id         Int      @id @default(autoincrement())
-  url        String
-
-  propertyId Int
-  property   Property @relation(fields: [propertyId], references: [id])
-}
-
-model Favorite {
-  id         Int @id @default(autoincrement())
-
-  userId     Int
-  propertyId Int
-
-  user       User     @relation(fields: [userId], references: [id])
-  property   Property @relation(fields: [propertyId], references: [id])
-
-  createdAt DateTime @default(now())
-}
-
+// ============================================
+// ENUMS
+// ============================================
 enum Role {
   USER
   AGENT
   ADMIN
 }
 
-enum PropertyType {
-  HOUSE
-  APARTMENT
-  LAND
-  OFFICE
-  SHOP
+enum Currency {
+  TZS
+  USD
 }
 
 enum PropertyStatus {
@@ -166,15 +30,259 @@ enum PropertyStatus {
   RENTED
 }
 
+// ============================================
+// USER MODELS
+// ============================================
+model User {
+  id        Int     @id @default(autoincrement())
+  fullName  String  @map("full_name") @db.VarChar(255)
+  email     String  @unique @map("email") @db.VarChar(255)
+  password  String  @map("password") @db.VarChar(255)
+  
+  role      Role    @default(USER) @map("role")
+  
+  // Contact info
+  phone     String? @map("phone") @db.VarChar(20)
+  whatsapp  String? @map("whatsapp") @db.VarChar(20)
+  avatar    String? @map("avatar") @db.Text
+  
+  // Relations
+  properties Property[]
+  favorites  Favorite[]
+  ratings    Rating[]
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  @@map("users")
+  @@index([email])
+  @@index([role])
+}
 
+model Rating {
+  id         Int     @id @default(autoincrement())
+  score      Int     @map("score") @db.SmallInt
+  comment    String? @map("comment") @db.Text
+  
+  userId     Int     @map("user_id")
+  propertyId Int     @map("property_id")
+  
+  user       User     @relation(fields: [userId], references: [id])
+  property   Property @relation(fields: [propertyId], references: [id])
+  
+  createdAt  DateTime @default(now()) @map("created_at")
+  
+  @@map("ratings")
+  @@unique([userId, propertyId])
+  @@index([propertyId])
+  @@index([score])
+  @@index([userId])
+}
+
+// ============================================
+// LOCATION MODELS
+// ============================================
+model Country {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique @map("name") @db.VarChar(100)
+  code      String?  @map("code") @db.VarChar(3)
+  
+  regions   Region[]
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  @@map("countries")
+  @@index([code])
+}
+
+model Region {
+  id        Int      @id @default(autoincrement())
+  name      String   @map("name") @db.VarChar(100)
+  countryId Int      @map("country_id")
+  
+  country   Country  @relation(fields: [countryId], references: [id])
+  districts District[]
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  @@map("regions")
+  @@unique([name, countryId])
+  @@index([countryId])
+}
+
+model District {
+  id        Int      @id @default(autoincrement())
+  name      String   @map("name") @db.VarChar(100)
+  regionId  Int      @map("region_id")
+  
+  region    Region   @relation(fields: [regionId], references: [id])
+  wards     Ward[]
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  @@map("districts")
+  @@unique([name, regionId])
+  @@index([regionId])
+}
+
+model Ward {
+  id         Int        @id @default(autoincrement())
+  name       String     @map("name") @db.VarChar(100)
+  districtId Int        @map("district_id")
+  
+  district   District   @relation(fields: [districtId], references: [id])
+  properties Property[]
+  
+  createdAt  DateTime   @default(now()) @map("created_at")
+  updatedAt  DateTime   @updatedAt @map("updated_at")
+  
+  @@map("wards")
+  @@unique([name, districtId])
+  @@index([districtId])
+}
+
+// ============================================
+// PROPERTY CATEGORIZATION
+// ============================================
+model Category {
+  id         Int        @id @default(autoincrement())
+  name       String     @unique @map("name") @db.VarChar(100)
+  icon       String?    @map("icon") @db.VarChar(50)
+  
+  properties Property[]
+  
+  createdAt  DateTime   @default(now()) @map("created_at")
+  
+  @@map("categories")
+}
+
+model Amenity {
+  id         Int              @id @default(autoincrement())
+  name       String           @unique @map("name") @db.VarChar(100)
+  icon       String?          @map("icon") @db.VarChar(50)
+  
+  properties PropertyAmenity[]
+  
+  createdAt  DateTime         @default(now()) @map("created_at")
+  
+  @@map("amenities")
+}
+
+model PropertyType {
+  id         Int        @id @default(autoincrement())
+  name       String     @unique @map("name") @db.VarChar(100)
+  icon       String?    @map("icon") @db.VarChar(50)
+  
+  properties Property[]
+  
+  createdAt  DateTime   @default(now()) @map("created_at")
+  
+  @@map("property_types")
+}
+
+// ============================================
+// MAIN PROPERTY MODEL
+// ============================================
+model Property {
+  id          Int            @id @default(autoincrement())
+  title       String         @map("title") @db.VarChar(255)
+  description String         @map("description") @db.Text
+  
+  // Pricing - Changed from Float to Decimal
+  price       Decimal        @map("price") @db.Decimal(15, 2)
+  currency    Currency       @default(TZS) @map("currency")
+  
+  // Type
+  typeId      Int?           @map("type_id")
+  type        PropertyType?  @relation(fields: [typeId], references: [id])
+  
+  // Status
+  status      PropertyStatus @default(AVAILABLE) @map("status")
+  
+  // Owner
+  userId      Int            @map("user_id")
+  user        User           @relation(fields: [userId], references: [id])
+  
+  // Category
+  categoryId  Int?           @map("category_id")
+  category    Category?      @relation(fields: [categoryId], references: [id])
+  
+  // Location
+  wardId      Int            @map("ward_id")
+  ward        Ward           @relation(fields: [wardId], references: [id])
+  
+  // Features - Changed from Float to Decimal
+  bedrooms    Int?           @map("bedrooms") @db.SmallInt
+  bathrooms   Int?           @map("bathrooms") @db.SmallInt
+  size        Decimal?       @map("size") @db.Decimal(10, 2)
+  yearBuilt   Int?           @map("year_built") @db.SmallInt
+  
+  // Relations
+  images      PropertyImage[]
+  favorites   Favorite[]
+  amenities   PropertyAmenity[]
+  ratings     Rating[]
+  
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+  
+  @@map("properties")
+  @@index([typeId])
+  @@index([wardId])
+  @@index([userId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([price])
+  @@index([createdAt])
+  @@index([bedrooms])
+}
+
+// ============================================
+// PROPERTY IMAGES
+// ============================================
+model PropertyImage {
+  id         Int      @id @default(autoincrement())
+  url        String   @map("url") @db.Text
+  propertyId Int      @map("property_id")
+  
+  property   Property @relation(fields: [propertyId], references: [id])
+  
+  @@map("property_images")
+  @@index([propertyId])
+}
+
+// ============================================
+// FAVORITES
+// ============================================
+model Favorite {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  propertyId Int      @map("property_id")
+  
+  user       User     @relation(fields: [userId], references: [id])
+  property   Property @relation(fields: [propertyId], references: [id])
+  
+  createdAt  DateTime @default(now()) @map("created_at")
+  
+  @@map("favorites")
+  @@unique([userId, propertyId])
+  @@index([userId])
+  @@index([propertyId])
+}
+
+// ============================================
+// PROPERTY AMENITIES (Junction Table)
+// ============================================
 model PropertyAmenity {
-  id         Int @id @default(autoincrement())
-
-  propertyId Int
-  amenityId  Int
-
-  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  amenity    Amenity  @relation(fields: [amenityId], references: [id], onDelete: Cascade)
-
+  id         Int      @id @default(autoincrement())
+  propertyId Int      @map("property_id")
+  amenityId  Int      @map("amenity_id")
+  
+  property   Property @relation(fields: [propertyId], references: [id])
+  amenity    Amenity  @relation(fields: [amenityId], references: [id])
+  
+  @@map("property_amenities")
   @@unique([propertyId, amenityId])
+  @@index([propertyId])
+  @@index([amenityId])
 }

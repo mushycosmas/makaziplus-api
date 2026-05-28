@@ -1,0 +1,11 @@
+import { IsOptional, IsString } from 'class-validator';
+
+export class UpdatePropertyTypeDto {
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  icon?: string;
+}

@@ -3,11 +3,10 @@ import {
   IsNotEmpty,
   IsNumber,
   IsOptional,
-  IsEnum,
+  IsArray,
 } from 'class-validator';
 
 import { Type } from 'class-transformer';
-import { PropertyType, PropertyStatus } from '@prisma/client';
 
 export class CreatePropertyDto {
   // =========================
@@ -32,17 +31,17 @@ export class CreatePropertyDto {
   price!: number;
 
   // =========================
-  // TYPE
+  // PROPERTY TYPE (NOW ID)
   // =========================
-  @IsEnum(PropertyType)
-  type!: PropertyType;
+  @Type(() => Number)
+  @IsNumber()
+  typeId!: number;
 
   // =========================
   // STATUS (optional)
   // =========================
   @IsOptional()
-  @IsEnum(PropertyStatus)
-  status?: PropertyStatus;
+  status?: string;
 
   // =========================
   // USER ID
@@ -52,7 +51,7 @@ export class CreatePropertyDto {
   userId!: number;
 
   // =========================
-  // CATEGORY ID
+  // CATEGORY ID (optional)
   // =========================
   @IsOptional()
   @Type(() => Number)
@@ -67,14 +66,15 @@ export class CreatePropertyDto {
   wardId!: number;
 
   // =========================
-  // AMENITIES (IMPORTANT FIX)
+  // AMENITIES (ARRAY OF IDS)
   // =========================
   @IsOptional()
-  amenityIds?: string; // sent from Postman as "[1,2,3]"
+  @IsArray()
+  amenityIds?: number[];
 
   // =========================
-  // IMAGES (NOT STORED IN DB DIRECTLY)
+  // IMAGES (UPLOAD HANDLED SEPARATELY)
   // =========================
   @IsOptional()
-  images?: any;
+  images?: any[];
 }

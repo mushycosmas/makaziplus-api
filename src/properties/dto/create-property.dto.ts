@@ -4,9 +4,12 @@ import {
   IsNumber,
   IsOptional,
   IsArray,
+  IsEnum,
+  IsInt,
+  Min,
 } from 'class-validator';
 
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 
 export class CreatePropertyDto {
   // =========================
@@ -28,52 +31,105 @@ export class CreatePropertyDto {
   // =========================
   @Type(() => Number)
   @IsNumber()
+  @Min(0)
   price!: number;
 
   // =========================
-  // PROPERTY TYPE (NOW ID)
+  // PROPERTY TYPE ID
   // =========================
   @Type(() => Number)
-  @IsNumber()
+  @IsInt()
   typeId!: number;
 
   // =========================
-  // STATUS (optional)
+  // STATUS
   // =========================
   @IsOptional()
-  status?: string;
+  @IsEnum(['AVAILABLE', 'SOLD', 'RENTED'])
+  status?: 'AVAILABLE' | 'SOLD' | 'RENTED';
 
   // =========================
   // USER ID
   // =========================
   @Type(() => Number)
-  @IsNumber()
+  @IsInt()
   userId!: number;
 
   // =========================
-  // CATEGORY ID (optional)
+  // CATEGORY ID
   // =========================
   @IsOptional()
   @Type(() => Number)
-  @IsNumber()
+  @IsInt()
   categoryId?: number;
 
   // =========================
   // WARD ID
   // =========================
   @Type(() => Number)
-  @IsNumber()
+  @IsInt()
   wardId!: number;
 
   // =========================
-  // AMENITIES (ARRAY OF IDS)
+  // BEDROOMS
   // =========================
   @IsOptional()
-  @IsArray()
-  amenityIds?: number[];
+  @Type(() => Number)
+  @IsInt()
+  bedrooms?: number;
 
   // =========================
-  // IMAGES (UPLOAD HANDLED SEPARATELY)
+  // BATHROOMS
+  // =========================
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  bathrooms?: number;
+
+  // =========================
+  // SIZE
+  // =========================
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  size?: number;
+
+  // =========================
+  // YEAR BUILT
+  // =========================
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  yearBuilt?: number;
+
+  // =========================
+  // AMENITIES (ARRAY OF IDS - FIXED)
+  // =========================
+ // Change this:
+@IsOptional()
+@Transform(({ value }) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.map(Number);
+  if (typeof value === 'string') return value.split(',').map(Number);
+  return [];
+})
+@IsArray()
+@Type(() => Number)
+amenities?: number[];  // ← Remove this
+
+// Add this:
+@IsOptional()
+@Transform(({ value }) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.map(Number);
+  if (typeof value === 'string') return value.split(',').map(Number);
+  return [];
+})
+@IsArray()
+@Type(() => Number)
+amenityIds?: number[];  // ← Add this
+  // =========================
+  // IMAGES
   // =========================
   @IsOptional()
   images?: any[];

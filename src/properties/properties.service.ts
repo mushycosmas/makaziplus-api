@@ -13,7 +13,6 @@ export class PropertiesService {
   private deleteFile(fileName: string) {
     try {
       const filePath = path.join(process.cwd(), 'uploads', fileName);
-
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }
@@ -23,100 +22,108 @@ export class PropertiesService {
   }
 
   // =========================
-  // CREATE PROPERTY
+  // CREATE PROPERTY (FIXED)
   // =========================
- async create(dto: any) {
-  const { amenityIds, images, ...propertyData } = dto;
+  async create(dto: any) {
 
-  // =========================
-  // AMENITIES PARSING (SAFE)
-  // =========================
-  const parsedAmenityIds: number[] = (Array.isArray(amenityIds)
-    ? amenityIds
-    : typeof amenityIds === 'string'
-      ? amenityIds.split(',')
-      : []
-  )
-    .map((v) => Number(v))
-    .filter((v) => Number.isInteger(v) && v > 0);
+    const { amenityIds, images, ...propertyData } = dto;
 
-  // =========================
-  // IMAGES
-  // =========================
-  const files = Array.isArray(images) ? images : [];
+    // =========================
+    // PARSE AMENITIES
+    // =========================
+    const parsedAmenityIds: number[] = (Array.isArray(amenityIds)
+      ? amenityIds
+      : typeof amenityIds === 'string'
+        ? amenityIds.split(',')
+        : []
+    )
+      .map((v) => Number(v))
+      .filter((v) => Number.isInteger(v) && v > 0);
 
-  return this.prisma.property.create({
-    data: {
-      ...propertyData,
+    const files = Array.isArray(images) ? images : [];
 
-      price: Number(propertyData.price),
-      userId: Number(propertyData.userId),
-      wardId: Number(propertyData.wardId),
-      categoryId: propertyData.categoryId
-        ? Number(propertyData.categoryId)
-        : undefined,
-      typeId: propertyData.typeId ? Number(propertyData.typeId) : undefined,
+    // =========================
+    // CREATE PROPERTY
+    // =========================
+    const property = await this.prisma.property.create({
+      data: {
+        ...propertyData,
 
-      // =========================
-      // IMAGES
-      // =========================
-      images: files.length
-        ? {
-            create: files.map((file: any) => ({
-              url: file.filename,
-            })),
-          }
-        : undefined,
+        price: Number(propertyData.price),
+        userId: Number(propertyData.userId),
+        wardId: Number(propertyData.wardId),
+        categoryId: propertyData.categoryId
+          ? Number(propertyData.categoryId)
+          : undefined,
+        typeId: propertyData.typeId
+          ? Number(propertyData.typeId)
+          : undefined,
 
-      // =========================
-      // AMENITIES (FIXED RELATION)
-      // =========================
-      amenities: parsedAmenityIds.length
-        ? {
-            create: parsedAmenityIds.map((id) => ({
-              amenity: {
-                connect: { id },
-              },
-            })),
-          }
-        : undefined,
-    },
+        // =========================
+        // IMAGES
+        // =========================
+        images: files.length
+          ? {
+              create: files.map((file: any) => ({
+                url: file.filename,
+              })),
+            }
+          : undefined,
+      },
+    });
 
-    include: {
-      user: true,
-      category: true,
+    // =========================
+    // INSERT AMENITIES (FIXED)
+    // =========================
+    if (parsedAmenityIds.length) {
+      await this.prisma.propertyAmenity.createMany({
+        data: parsedAmenityIds.map((amenityId) => ({
+          propertyId: property.id,
+          amenityId,
+        })),
+      });
+    }
 
-      ward: {
-        include: {
-          district: {
-            include: {
-              region: {
-                include: {
-                  country: true,
+    // =========================
+    // RETURN FULL DATA
+    // =========================
+    return this.prisma.property.findUnique({
+      where: { id: property.id },
+      include: {
+        user: true,
+        category: true,
+
+        ward: {
+          include: {
+            district: {
+              include: {
+                region: {
+                  include: {
+                    country: true,
+                  },
                 },
               },
             },
           },
         },
-      },
 
-      images: true,
+        images: true,
 
-      amenities: {
-        include: {
-          amenity: true,
+        amenities: {
+          include: {
+            amenity: true,
+          },
         },
-      },
 
-      favorites: true,
-    },
-  });
-}
+        favorites: true,
+      },
+    });
+  }
 
   // =========================
   // GET ALL
   // =========================
-  async findAll(page: number = 1, limit: number = 10) {
+  async findAll(page = 1, limit = 10) {
     const skip = (page - 1) * limit;
 
     const [data, total] = await this.prisma.$transaction([
@@ -126,14 +133,7 @@ export class PropertiesService {
         orderBy: { createdAt: 'desc' },
 
         include: {
-          user: {
-            select: {
-              id: true,
-              fullName: true,
-              email: true,
-            },
-          },
-
+          user: true,
           category: true,
 
           ward: {
@@ -157,9 +157,7 @@ export class PropertiesService {
           },
 
           _count: {
-            select: {
-              favorites: true,
-            },
+            select: { favorites: true },
           },
         },
       }),
@@ -212,23 +210,19 @@ export class PropertiesService {
   }
 
   // =========================
-  // UPDATE PROPERTY
+  // UPDATE PROPERTY (FIXED)
   // =========================
   async update(id: number, dto: any) {
     const { amenityIds, images, ...rest } = dto;
 
-    let parsedAmenityIds: number[] = [];
-
-    if (typeof amenityIds === 'string') {
-      parsedAmenityIds = amenityIds
-        .split(',')
-        .map((v) => Number(v.trim()))
-        .filter((v) => Number.isInteger(v) && v > 0);
-    } else if (Array.isArray(amenityIds)) {
-      parsedAmenityIds = amenityIds
-        .map((v) => Number(v))
-        .filter((v) => Number.isInteger(v) && v > 0);
-    }
+    const parsedAmenityIds: number[] = (Array.isArray(amenityIds)
+      ? amenityIds
+      : typeof amenityIds === 'string'
+        ? amenityIds.split(',')
+        : []
+    )
+      .map((v) => Number(v))
+      .filter((v) => Number.isInteger(v) && v > 0);
 
     const files = Array.isArray(images) ? images : [];
 

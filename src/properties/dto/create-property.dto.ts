@@ -105,29 +105,35 @@ export class CreatePropertyDto {
   // =========================
   // AMENITIES (ARRAY OF IDS - FIXED)
   // =========================
- // Change this:
-@IsOptional()
+  @IsOptional()
 @Transform(({ value }) => {
   if (!value) return [];
-  if (Array.isArray(value)) return value.map(Number);
-  if (typeof value === 'string') return value.split(',').map(Number);
-  return [];
-})
-@IsArray()
-@Type(() => Number)
-amenities?: number[];  // ← Remove this
 
-// Add this:
-@IsOptional()
-@Transform(({ value }) => {
-  if (!value) return [];
-  if (Array.isArray(value)) return value.map(Number);
-  if (typeof value === 'string') return value.split(',').map(Number);
-  return [];
+  let arr: any[] = [];
+
+  // if already array
+  if (Array.isArray(value)) {
+    arr = value;
+  }
+
+  // if string (very common in multipart/form-data)
+  else if (typeof value === 'string') {
+    try {
+      // try JSON first: "[11,12]"
+      arr = JSON.parse(value);
+    } catch {
+      // fallback: "11,12"
+      arr = value.split(',');
+    }
+  }
+
+  return arr
+    .map((v) => Number(v))
+    .filter((v) => Number.isFinite(v) && v > 0);
 })
 @IsArray()
-@Type(() => Number)
-amenityIds?: number[];  // ← Add this
+amenityIds?: number[];
+
   // =========================
   // IMAGES
   // =========================

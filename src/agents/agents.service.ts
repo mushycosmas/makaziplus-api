@@ -22,6 +22,7 @@ export class AgentsService {
           fullName: true,
           email: true,
           role: true,
+          avator:true,
           createdAt: true,
           _count: {
             select: {
